@@ -52,6 +52,17 @@ public struct JsonSerializableMacro: MemberMacro {
             var container = encoder.container(keyedBy: SimpleCodingKeys.self)
             \(raw: encodeExprs)
         }
+        
+        static func initialize(jsonData: Data) throws -> Self {
+            return try JSONDecoder().decode(Self.self, from: jsonData)
+        }
+        
+        static func initialize(jsonString: String, encoding: String.Encoding = .utf8, allowLossyConversion: Bool = false) throws -> Self {
+            guard let data = jsonString.data(using: encoding, allowLossyConversion: allowLossyConversion) else {
+                throw NSError(domain: "JsonSerializableMacro", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON string"])
+            }
+            return try initialize(jsonData: data)
+        }
         """
         
         return [prop]
