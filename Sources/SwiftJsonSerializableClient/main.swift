@@ -4,15 +4,15 @@ import Foundation
 let sampe = """
 {
     "name": "John Doe",
-    "age": 30,
+    "year": 30,
     "isEmployed": true
 }
 """
 
 @JsonSerializable
 struct Sample: Codable {
-    @JsonKey var name       : String = ""
-    @JsonKey var age        : Int    = 0
+    @JsonKey(keys: "username", "name") var name: String = ""
+    @JsonKey(key: "year") var age        : Int    = 0
     @JsonKey var isEmployed : Bool   = false
 }
 

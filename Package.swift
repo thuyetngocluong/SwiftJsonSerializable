@@ -4,6 +4,16 @@
 import PackageDescription
 import CompilerPluginSupport
 
+let swiftSyntaxVersion: Version
+
+#if compiler(>=6.0)
+swiftSyntaxVersion = "600.0.0"
+#elseif compiler(>=5.10)
+swiftSyntaxVersion = "510.0.0"
+#else
+swiftSyntaxVersion = "509.0.0"
+#endif
+
 let package = Package(
     name: "SwiftJsonSerializable",
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .watchOS(.v6), .macCatalyst(.v13)],
@@ -19,7 +29,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "509.0.0"),
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: swiftSyntaxVersion),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

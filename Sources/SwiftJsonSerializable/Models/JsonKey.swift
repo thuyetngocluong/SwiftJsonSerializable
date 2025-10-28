@@ -12,13 +12,31 @@ public struct JsonKey<T: Codable>: Codable, @unchecked Sendable {
     private let customKeys     : [String]
     private let ignoringErrors : Bool
     
-    public init(wrappedValue: T, keys: String..., ignoringErrors: Bool = true) {
+    public init(
+        wrappedValue: T,
+        keys: String...,
+        ignoringErrors: Bool = true)
+    {
         self.wrappedValue = wrappedValue
         self.customKeys = keys
         self.ignoringErrors = ignoringErrors
     }
     
-    public init(wrappedValue: T, keys: [String], ignoringErrors: Bool = true) {
+    public init(
+        wrappedValue: T,
+        key: String,
+        ignoringErrors: Bool = true
+    ) {
+        self.wrappedValue = wrappedValue
+        self.customKeys = [key]
+        self.ignoringErrors = ignoringErrors
+    }
+    
+    public init(
+        wrappedValue: T,
+        keys: [String],
+        ignoringErrors: Bool = true
+    ) {
         self.wrappedValue = wrappedValue
         self.customKeys = keys
         self.ignoringErrors = ignoringErrors
@@ -27,6 +45,7 @@ public struct JsonKey<T: Codable>: Codable, @unchecked Sendable {
     mutating public func decode(from container: KeyedDecodingContainer<SimpleCodingKeys>, variableName: String) throws {
         let stringKeys = customKeys.isEmpty ? [variableName] : customKeys
         var errors = [Error]()
+        
         for stringKey in stringKeys {
             do {
                 if let decoded = try container.decodeIfPresent(T.self, forKey: .init(stringValue: stringKey)) {
