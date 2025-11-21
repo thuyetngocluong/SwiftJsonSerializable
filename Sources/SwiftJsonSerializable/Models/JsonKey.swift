@@ -5,6 +5,9 @@
 //  Created by Zoro4rk on 19/10/25.
 //
 
+import ZippyJSON
+
+
 @propertyWrapper
 public struct JsonKey<T: Codable>: Codable, @unchecked Sendable {
     

@@ -1,5 +1,6 @@
 import SwiftJsonSerializable
 import Foundation
+import ZippyJSON
 
 let sampe = """
 {
@@ -24,4 +25,5 @@ let fromData = try! Sample.initialize(jsonData: sampe.data(using: .utf8)!)
 let sample = try! JSONDecoder().decode(Sample.self, from: sampe.data(using: .utf8)!)
 
 
-print("Name: \(sample.name), Age: \(sample.age), Employed: \(sample.isEmployed)")
+print("Name: \(fromString.name), Age: \(fromString.age), Employed: \(fromString.isEmployed)")
+print("Name: \(fromData.name), Age: \(fromData.age), Employed: \(fromData.isEmployed)")

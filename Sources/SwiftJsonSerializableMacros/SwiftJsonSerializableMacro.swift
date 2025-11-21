@@ -54,7 +54,11 @@ public struct JsonSerializableMacro: MemberMacro {
         }
         
         static func initialize(jsonData: Data) throws -> Self {
+            #if canImport(ZippyJSON)
+            return try ZippyJSONDecoder().decode(Self.self, from: jsonData)
+            #else
             return try JSONDecoder().decode(Self.self, from: jsonData)
+            #endif
         }
         
         static func initialize(jsonString: String, encoding: String.Encoding = .utf8, allowLossyConversion: Bool = false) throws -> Self {

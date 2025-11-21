@@ -30,6 +30,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: swiftSyntaxVersion),
+        .package(url: "https://github.com/michaeleisel/zippyjson.git", from: "1.2.15"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -44,10 +45,11 @@ let package = Package(
         ),
 
         // Library that exposes a macro as part of its API, which is used in client programs.
-        .target(name: "SwiftJsonSerializable", dependencies: ["SwiftJsonSerializableMacros"]),
-
+        .target(name: "SwiftJsonSerializable", dependencies: [
+            "SwiftJsonSerializableMacros",
+            .product(name: "ZippyJSON", package: "zippyjson")
+        ]),
         // A client of the library, which is able to use the macro in its own code.
         .executableTarget(name: "SwiftJsonSerializableClient", dependencies: ["SwiftJsonSerializable"]),
-
     ]
 )
