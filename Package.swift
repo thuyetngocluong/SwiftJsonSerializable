@@ -51,5 +51,27 @@ let package = Package(
         ]),
         // A client of the library, which is able to use the macro in its own code.
         .executableTarget(name: "SwiftJsonSerializableClient", dependencies: ["SwiftJsonSerializable"]),
+
+        // A separate consumer module (not shipped) that defines a PUBLIC model and only
+        // imports SwiftJsonSerializable. If the generated members weren't `public`, or if
+        // the generated `initialize(...)` referenced ZippyJSON directly, this target would
+        // fail to compile — so it pins the cross-module fixes.
+        .target(
+            name: "SwiftJsonSerializableTestFixtures",
+            dependencies: ["SwiftJsonSerializable"]
+        ),
+        // Behaviour tests. Deliberately does NOT depend on ZippyJSON.
+        .testTarget(
+            name: "SwiftJsonSerializableTests",
+            dependencies: ["SwiftJsonSerializable", "SwiftJsonSerializableTestFixtures"]
+        ),
+        // Macro-expansion tests.
+        .testTarget(
+            name: "SwiftJsonSerializableMacrosTests",
+            dependencies: [
+                "SwiftJsonSerializableMacros",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+            ]
+        ),
     ]
 )

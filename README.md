@@ -113,7 +113,9 @@ struct User: Codable {
 }
 ```
 
-The decoder tries each key in order and uses the first one that succeeds.
+The decoder tries each key in order and uses the first one that succeeds. When **encoding**, the
+value is written under a single key — the key it was decoded from (so a round-trip is key-stable),
+or the first declared key for a value that was constructed in code rather than decoded.
 
 ### Custom Single Key
 
@@ -129,15 +131,24 @@ struct Product: Codable {
 
 ### Error Handling
 
-By default, `ignoringErrors` is `true`, meaning decoding continues even if a property fails:
+By default, `ignoringErrors` is `true`: if a key is absent, `null`, or present but fails to
+decode, the property keeps its default value and decoding continues.
+
+Setting `ignoringErrors: false` makes the property **strict** — it throws when the key is
+**present but cannot be decoded** (for example a type mismatch). An absent or `null` key still
+falls back to the default, so optional fields keep working as expected:
 
 ```swift
 @JsonSerializable
 struct Settings: Codable {
     @JsonKey var theme: String = "light"
-    @JsonKey(ignoringErrors: false) var apiKey: String = ""  // Strict: will throw if missing
+    @JsonKey(ignoringErrors: false) var port: Int = 8080  // throws if "port" is present but not an Int
 }
 ```
+
+> Note: strict mode does **not** make a field required. Because every `@JsonKey` has a default
+> value, a missing or `null` key always falls back to that default in both modes. Strict mode
+> only surfaces *malformed* values instead of silently swallowing them.
 
 ### Using Convenience Initializers
 
@@ -208,6 +219,10 @@ For each `@JsonKey` property, the macro:
 - The `JsonKey` wrapper handles key fallback logic and error handling
 
 This approach keeps your code clean while providing powerful customization options.
+
+> Your model file should `import Foundation` (the generated `initialize(jsonData:)` /
+> `initialize(jsonString:)` helpers use `Data`). You do **not** need to `import ZippyJSON` —
+> it stays encapsulated inside `SwiftJsonSerializable`.
 
 ## API Reference
 
@@ -301,7 +316,7 @@ cd SwiftJsonSerializable
 # Build the package
 swift build
 
-# Run tests (if available)
+# Run tests
 swift test
 
 # Run the example

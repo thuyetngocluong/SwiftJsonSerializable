@@ -14,10 +14,17 @@ public struct JsonSerializableMacro: MemberMacro {
         let typeName = decl.as(StructDeclSyntax.self)?.name ?? decl.as(ClassDeclSyntax.self)?.name
         let memberBlock = decl.memberBlock
         let isClass = decl.as(ClassDeclSyntax.self) != nil
-        
+
         guard let _ = typeName else {
             throw CustomError.onlyOnStructOrClass
         }
+
+        // Propagate the type's access level to the generated members, otherwise a
+        // `public` model's Decodable/Encodable conformance and `initialize(...)`
+        // helpers would be internal and unusable from another module.
+        let typeModifiers = decl.as(StructDeclSyntax.self)?.modifiers ?? decl.as(ClassDeclSyntax.self)?.modifiers
+        let isPublic = typeModifiers?.contains { ["public", "open"].contains($0.name.text) } ?? false
+        let access = isPublic ? "public " : ""
         
         let propertiesName = memberBlock.members
             .compactMap { $0.decl.as(VariableDeclSyntax.self) }
@@ -43,29 +50,22 @@ public struct JsonSerializableMacro: MemberMacro {
         
         let prop: DeclSyntax =
         """
-        \(raw: isClass ? "required " : "")init(from decoder: any Decoder) throws {
+        \(raw: access)\(raw: isClass ? "required " : "")init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: SimpleCodingKeys.self)
             \(raw: decodeExprs)
         }
-        
-        func encode(to encoder: any Encoder) throws {
+
+        \(raw: access)func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: SimpleCodingKeys.self)
             \(raw: encodeExprs)
         }
-        
-        static func initialize(jsonData: Data) throws -> Self {
-            #if canImport(ZippyJSON)
-            return try ZippyJSONDecoder().decode(Self.self, from: jsonData)
-            #else
-            return try JSONDecoder().decode(Self.self, from: jsonData)
-            #endif
+
+        \(raw: access)static func initialize(jsonData: Data) throws -> Self {
+            return try JsonDeserializer.decode(Self.self, from: jsonData)
         }
-        
-        static func initialize(jsonString: String, encoding: String.Encoding = .utf8, allowLossyConversion: Bool = false) throws -> Self {
-            guard let data = jsonString.data(using: encoding, allowLossyConversion: allowLossyConversion) else {
-                throw NSError(domain: "JsonSerializableMacro", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON string"])
-            }
-            return try initialize(jsonData: data)
+
+        \(raw: access)static func initialize(jsonString: String, encoding: String.Encoding = .utf8, allowLossyConversion: Bool = false) throws -> Self {
+            return try JsonDeserializer.decode(Self.self, fromJsonString: jsonString, encoding: encoding, allowLossyConversion: allowLossyConversion)
         }
         """
         
