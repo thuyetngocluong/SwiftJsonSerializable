@@ -10,11 +10,14 @@ import SwiftDiagnostics
 /// Compile-time diagnostics emitted by `@JsonSerializable`.
 enum JsonSerializableDiagnostic: DiagnosticMessage {
     case missingJsonKey(property: String)
+    case jsonKeyRequiresVar(property: String)
 
     var message: String {
         switch self {
         case .missingJsonKey(let property):
-            return "Property '\(property)' has no @JsonKey and will not be encoded or decoded by @JsonSerializable. Add @JsonKey, or make it a computed/static property to silence this warning."
+            return "Property '\(property)' has no @JsonKey and will not be encoded or decoded by @JsonSerializable. Add @JsonKey, or make it computed to silence this warning."
+        case .jsonKeyRequiresVar(let property):
+            return "@JsonKey on 'let \(property)' has no effect — it is not encoded or decoded. Change it to 'var' to serialize it."
         }
     }
 
@@ -22,6 +25,8 @@ enum JsonSerializableDiagnostic: DiagnosticMessage {
         switch self {
         case .missingJsonKey:
             return MessageID(domain: "SwiftJsonSerializable", id: "missingJsonKey")
+        case .jsonKeyRequiresVar:
+            return MessageID(domain: "SwiftJsonSerializable", id: "jsonKeyRequiresVar")
         }
     }
 

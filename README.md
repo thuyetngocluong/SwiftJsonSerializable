@@ -238,7 +238,11 @@ This approach keeps your code clean while providing powerful customization optio
 - **Encoding writes one key.** A multi-key property is written under the key it was decoded
   from, or the first declared key for a code-constructed value — not under every key.
 - **`ignoringErrors` affects decoding only.** Encoding always propagates errors, so a value
-  that cannot be serialized surfaces instead of being silently dropped.
+  that cannot be serialized surfaces instead of being silently dropped. Note that with
+  multiple keys, a malformed value under one key does not throw if a later fallback key
+  decodes successfully — the fallback wins (the point of multi-key resolution).
+- **`Sendable` is conditional** (`JsonKey` is `Sendable` only when its value type is). A
+  `JsonKey` over a non-`Sendable` type is no longer silently treated as `Sendable`.
 - **Optional handling.** A `nil` Optional is omitted from the output (inside
   `@JsonSerializable`); on decode, an absent or `null` key falls back to the default. An
   explicit `null` and an absent key are treated the same.

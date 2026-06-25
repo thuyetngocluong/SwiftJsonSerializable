@@ -63,6 +63,41 @@ extension SyntaxProtocol {
     }
 }
 
+extension VariableDeclSyntax {
+    /// A property is *stored* when it has no accessor block, or only observers
+    /// (`didSet`/`willSet`). A getter / `get`+`set` block makes it computed.
+    var isStoredProperty: Bool {
+        guard let accessorBlock = bindings.first?.accessorBlock else { return true }
+        switch accessorBlock.accessors {
+        case .accessors(let accessors):
+            return accessors.allSatisfy { ["didSet", "willSet"].contains($0.accessorSpecifier.text) }
+        case .getter:
+            return false
+        }
+    }
+
+    var isStatic: Bool {
+        modifiers.contains { ["static", "class"].contains($0.name.text) }
+    }
+
+    var isLazy: Bool {
+        modifiers.contains { $0.name.text == "lazy" }
+    }
+
+    var isLet: Bool {
+        bindingSpecifier.text == "let"
+    }
+
+    /// Every identifier bound by this declaration (handles `var a, b: Int`).
+    var boundNames: [String] {
+        bindings.compactMap { $0.pattern.as(IdentifierPatternSyntax.self)?.identifier.text }
+    }
+
+    var hasJsonKey: Bool {
+        attributes.has(attributesIn: ["JsonKey"])
+    }
+}
+
 extension String {
     func isValidURLRegex() -> Bool {
         let pattern = #"^(https?|ftp)://[^\s/$.?#].[^\s]*$"#

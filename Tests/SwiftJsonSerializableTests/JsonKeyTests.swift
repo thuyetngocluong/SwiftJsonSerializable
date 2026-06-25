@@ -51,6 +51,15 @@ struct HasThrowingField: Codable {
     @JsonKey var t: ThrowsOnEncode = ThrowsOnEncode()   // default ignoringErrors: true
 }
 
+// An observed (didSet) stored property must still be (de)coded.
+@JsonSerializable
+struct Observed: Codable {
+    @JsonKey(key: "n") var n: Int = 0 {
+        didSet { Observed.lastObserved = n }
+    }
+    static var lastObserved = -1
+}
+
 final class JsonKeyTests: XCTestCase {
 
     private let decoder = JSONDecoder()
@@ -235,5 +244,36 @@ final class JsonKeyTests: XCTestCase {
         // The enclosing synthesized Decodable calls container.decode(...) and throws before
         // the wrapper can apply its default — this asserts the documented behavior.
         XCTAssertThrowsError(try decoder.decode(PlainContainer.self, from: json(#"{"note":"hi"}"#)))
+    }
+
+    // MARK: observed (didSet/willSet) properties are still coded
+
+    func testObservedPropertyIsCoded() throws {
+        let o = try decoder.decode(Observed.self, from: json(#"{"n":42}"#))
+        XCTAssertEqual(o.n, 42)
+        let obj = try object(try encoder.encode(o))
+        XCTAssertEqual(obj["n"] as? Int, 42)
+    }
+
+    // MARK: strict OPTIONAL field still throws on a present-but-malformed value
+
+    func testStrictOptionalTypeMismatchThrows() {
+        XCTAssertThrowsError(try decoder.decode(OptionalModel.self, from: json(#"{"middle":123}"#)))
+    }
+
+    // MARK: ZippyJSON (the production initialize path) matches Foundation on edge cases
+
+    func testZippyJSONStrictNullDoesNotThrow() throws {
+        let s = try Strict.initialize(jsonString: #"{"id":null}"#)
+        XCTAssertEqual(s.id, -1)
+    }
+
+    func testZippyJSONStrictTypeMismatchThrows() {
+        XCTAssertThrowsError(try Strict.initialize(jsonString: #"{"id":"NaN"}"#))
+    }
+
+    func testZippyJSONMultiKeyFallback() throws {
+        let m = try MultiKey.initialize(jsonString: #"{"firstName":"Bob"}"#)
+        XCTAssertEqual(m.name, "Bob")
     }
 }
