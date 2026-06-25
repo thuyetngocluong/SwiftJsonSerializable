@@ -228,8 +228,9 @@ This approach keeps your code clean while providing powerful customization optio
 
 - **Every stored property needs `@JsonKey`.** Properties without it are neither decoded nor
   encoded by the generated code. The macro emits a compile-time **warning** for any
-  un-annotated stored property so the omission is never silent — annotate it, or make it
-  computed/`static` to opt out.
+  un-annotated stored property so the omission is never silent. A property you intentionally
+  keep un-annotated must have a **default value** (or be optional), otherwise the generated
+  `init(from:)` cannot initialize it and the build fails.
 - **`@JsonKey` works fully only inside `@JsonSerializable`.** When used in a plain `Codable`
   type, an array, or a dictionary, the wrapper passes its value through transparently, but
   multi-key fallback, `ignoringErrors`, and default-on-missing are **not** available there —

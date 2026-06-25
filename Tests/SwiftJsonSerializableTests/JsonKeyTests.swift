@@ -60,6 +60,12 @@ struct Observed: Codable {
     static var lastObserved = -1
 }
 
+// A type with no codable stored properties must still encode to `{}` (not throw).
+@JsonSerializable
+struct EmptyModel: Codable {
+    var computed: Int { 5 }
+}
+
 final class JsonKeyTests: XCTestCase {
 
     private let decoder = JSONDecoder()
@@ -275,5 +281,14 @@ final class JsonKeyTests: XCTestCase {
     func testZippyJSONMultiKeyFallback() throws {
         let m = try MultiKey.initialize(jsonString: #"{"firstName":"Bob"}"#)
         XCTAssertEqual(m.name, "Bob")
+    }
+
+    // MARK: a type with no codable properties encodes to {} instead of throwing
+
+    func testZeroPropertyTypeRoundTrips() throws {
+        let m = try decoder.decode(EmptyModel.self, from: json("{}"))
+        XCTAssertEqual(m.computed, 5)
+        let data = try encoder.encode(m)
+        XCTAssertEqual(String(decoding: data, as: UTF8.self), "{}")
     }
 }

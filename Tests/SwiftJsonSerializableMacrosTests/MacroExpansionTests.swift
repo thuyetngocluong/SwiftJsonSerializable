@@ -269,8 +269,8 @@ final class MacroExpansionTests: XCTestCase {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "Property 'p' has no @JsonKey and will not be encoded or decoded by @JsonSerializable. Add @JsonKey, or make it computed to silence this warning.", line: 4, column: 5, severity: .warning),
-                DiagnosticSpec(message: "Property 'q' has no @JsonKey and will not be encoded or decoded by @JsonSerializable. Add @JsonKey, or make it computed to silence this warning.", line: 4, column: 5, severity: .warning)
+                DiagnosticSpec(message: "Property 'p' has no @JsonKey and will not be encoded or decoded by @JsonSerializable.", line: 4, column: 5, severity: .warning),
+                DiagnosticSpec(message: "Property 'q' has no @JsonKey and will not be encoded or decoded by @JsonSerializable.", line: 4, column: 5, severity: .warning)
             ],
             macros: macros
         )
@@ -292,6 +292,7 @@ final class MacroExpansionTests: XCTestCase {
                 }
 
                 func encode(to encoder: any Encoder) throws {
+                    _ = encoder.container(keyedBy: SimpleCodingKeys.self)
                 }
 
                 static func initialize(jsonData: Data) throws -> Self {
@@ -342,7 +343,7 @@ final class MacroExpansionTests: XCTestCase {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "Property 'plain' has no @JsonKey and will not be encoded or decoded by @JsonSerializable. Add @JsonKey, or make it computed to silence this warning.",
+                    message: "Property 'plain' has no @JsonKey and will not be encoded or decoded by @JsonSerializable.",
                     line: 4,
                     column: 5,
                     severity: .warning

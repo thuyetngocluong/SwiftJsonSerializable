@@ -62,9 +62,12 @@ public struct JsonSerializableMacro: MemberMacro {
                 } else {
                     propertiesName.append(contentsOf: variable.boundNames)
                 }
-            } else if !variable.isLet {
-                // A mutable stored property with no @JsonKey is silently dropped — warn.
-                // `let` is left alone: it cannot take @JsonKey, so the warning isn't actionable.
+            } else {
+                // A stored property with no @JsonKey is dropped from coding — warn so it is
+                // never silent (covers var/let and tuple bindings). Skip properties carrying
+                // another attribute (e.g. a different property wrapper such as @Published),
+                // where the "@JsonKey" advice would be impossible to follow.
+                guard variable.attributes.isEmpty else { continue }
                 for name in variable.boundNames {
                     context.diagnose(Diagnostic(
                         node: Syntax(variable),
@@ -91,6 +94,7 @@ public struct JsonSerializableMacro: MemberMacro {
         }
 
         \(raw: access)func encode(to encoder: any Encoder) throws {
+            _ = encoder.container(keyedBy: SimpleCodingKeys.self)
         }
 
         \(raw: access)static func initialize(jsonData: Data) throws -> Self {

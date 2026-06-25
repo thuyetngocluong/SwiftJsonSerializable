@@ -15,7 +15,7 @@ enum JsonSerializableDiagnostic: DiagnosticMessage {
     var message: String {
         switch self {
         case .missingJsonKey(let property):
-            return "Property '\(property)' has no @JsonKey and will not be encoded or decoded by @JsonSerializable. Add @JsonKey, or make it computed to silence this warning."
+            return "Property '\(property)' has no @JsonKey and will not be encoded or decoded by @JsonSerializable."
         case .jsonKeyRequiresVar(let property):
             return "@JsonKey on 'let \(property)' has no effect — it is not encoded or decoded. Change it to 'var' to serialize it."
         }

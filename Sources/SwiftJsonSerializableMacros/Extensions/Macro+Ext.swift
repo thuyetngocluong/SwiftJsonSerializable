@@ -88,9 +88,18 @@ extension VariableDeclSyntax {
         bindingSpecifier.text == "let"
     }
 
-    /// Every identifier bound by this declaration (handles `var a, b: Int`).
+    /// Every identifier bound by this declaration (handles `var a, b: Int` and the
+    /// tuple binding `var (a, b) = ...`).
     var boundNames: [String] {
-        bindings.compactMap { $0.pattern.as(IdentifierPatternSyntax.self)?.identifier.text }
+        bindings.flatMap { binding -> [String] in
+            if let identifier = binding.pattern.as(IdentifierPatternSyntax.self) {
+                return [identifier.identifier.text]
+            }
+            if let tuple = binding.pattern.as(TuplePatternSyntax.self) {
+                return tuple.elements.compactMap { $0.pattern.as(IdentifierPatternSyntax.self)?.identifier.text }
+            }
+            return []
+        }
     }
 
     var hasJsonKey: Bool {
