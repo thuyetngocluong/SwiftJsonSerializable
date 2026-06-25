@@ -38,6 +38,19 @@ struct PlainContainer: Codable {
     var note: String = ""
 }
 
+// A value whose own encode(to:) always fails, to prove encode errors are not swallowed.
+struct ThrowsOnEncode: Codable, Equatable {
+    enum Boom: Error { case boom }
+    init() {}
+    init(from decoder: any Decoder) throws {}        // decodes from anything
+    func encode(to encoder: any Encoder) throws { throw Boom.boom }
+}
+
+@JsonSerializable
+struct HasThrowingField: Codable {
+    @JsonKey var t: ThrowsOnEncode = ThrowsOnEncode()   // default ignoringErrors: true
+}
+
 final class JsonKeyTests: XCTestCase {
 
     private let decoder = JSONDecoder()
@@ -197,5 +210,30 @@ final class JsonKeyTests: XCTestCase {
         let dto = try CrossModuleDTO.initialize(jsonString: #"{"full_name":"Max","id":9}"#)
         XCTAssertEqual(dto.id, 9)
         XCTAssertEqual(dto.name, "Max")       // matched via first key "full_name"
+    }
+
+    // package-level type usable cross-module (generated members are `package`).
+    func testCrossModulePackageTypeRoundTrips() throws {
+        let dto = try decoder.decode(PackageDTO.self, from: json(#"{"id":5}"#))
+        XCTAssertEqual(dto.id, 5)
+        let obj = try object(try encoder.encode(dto))
+        XCTAssertEqual(obj["id"] as? Int, 5)
+    }
+
+    // MARK: encode errors are not swallowed (ignoringErrors governs decoding only)
+
+    func testEncodeErrorIsPropagated() throws {
+        let m = try decoder.decode(HasThrowingField.self, from: json(#"{"t":{}}"#))
+        XCTAssertThrowsError(try encoder.encode(m)) { error in
+            XCTAssertTrue(error is ThrowsOnEncode.Boom)
+        }
+    }
+
+    // MARK: documented limitation — outside @JsonSerializable, an absent key throws
+
+    func testPlainCodableAbsentKeyThrows() {
+        // The enclosing synthesized Decodable calls container.decode(...) and throws before
+        // the wrapper can apply its default — this asserts the documented behavior.
+        XCTAssertThrowsError(try decoder.decode(PlainContainer.self, from: json(#"{"note":"hi"}"#)))
     }
 }

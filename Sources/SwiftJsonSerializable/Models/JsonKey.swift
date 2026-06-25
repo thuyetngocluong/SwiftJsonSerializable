@@ -58,10 +58,17 @@ public struct JsonKey<T: Codable>: Codable {
 
     // MARK: - Transparent Codable
 
-    // When a @JsonKey property is used outside an @JsonSerializable type (e.g. inside a
+    // When a @JsonKey property is used OUTSIDE an @JsonSerializable type (e.g. inside a
     // plain Codable, an array, or a dictionary) the synthesized Codable would otherwise
     // serialize the wrapper's private storage. Encode/decode the wrapped value
     // transparently so the wrapper is invisible in that JSON.
+    //
+    // Limitations of this fallback path (they require @JsonSerializable, whose generated
+    // code drives the keyed `decode(from:variableName:)` / `encode(to:variableName:)`
+    // methods below): multi-key fallback and `ignoringErrors` are NOT applied here, the
+    // default value is NOT used for an absent key (the enclosing synthesized Decodable
+    // throws before this initializer is even reached), and a nil Optional is written as
+    // an explicit `null` (a single-value container cannot omit the key).
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         self.wrappedValue = try container.decode(T.self)
@@ -111,11 +118,10 @@ public struct JsonKey<T: Codable>: Codable {
         // Write a single key: the one the value was decoded from (key-stable round-trip),
         // otherwise the first declared key. Additional keys are decode-time fallbacks only.
         let targetKey = decodedKey ?? customKeys.first ?? variableName
-        do {
-            try container.encode(wrappedValue, forKey: .init(stringValue: targetKey))
-        } catch {
-            if !ignoringErrors { throw error }
-        }
+        // `ignoringErrors` governs DECODING only (so a malformed payload still produces a
+        // value). On encode we always propagate: swallowing here would silently drop a
+        // field from the output JSON — data loss the caller never learns about.
+        try container.encode(wrappedValue, forKey: .init(stringValue: targetKey))
     }
 }
 

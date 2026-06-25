@@ -1,4 +1,5 @@
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
@@ -19,13 +20,42 @@ public struct JsonSerializableMacro: MemberMacro {
             throw CustomError.onlyOnStructOrClass
         }
 
-        // Propagate the type's access level to the generated members, otherwise a
-        // `public` model's Decodable/Encodable conformance and `initialize(...)`
-        // helpers would be internal and unusable from another module.
-        let typeModifiers = decl.as(StructDeclSyntax.self)?.modifiers ?? decl.as(ClassDeclSyntax.self)?.modifiers
-        let isPublic = typeModifiers?.contains { ["public", "open"].contains($0.name.text) } ?? false
-        let access = isPublic ? "public " : ""
-        
+        // Propagate the type's access level to the generated members, otherwise the
+        // Decodable/Encodable witnesses and `initialize(...)` helpers would be less
+        // accessible than the type and either fail the conformance (`public`/`package`
+        // types) or be unusable from another module.
+        //
+        // `open` is mapped to `public`: @JsonSerializable does not support class
+        // inheritance — the generated init(from:)/encode(to:) handle only the current
+        // type's @JsonKey fields and do not chain to `super` — so emitting overridable
+        // (`open`) members would invite silently-broken subclasses.
+        let modifierNames = Set(decl.modifiers.map(\.name.text))
+        let access: String
+        if modifierNames.contains("public") || modifierNames.contains("open") {
+            access = "public "
+        } else if modifierNames.contains("package") {
+            access = "package "
+        } else {
+            access = ""
+        }
+
+        // Surface silent data loss: a stored property without @JsonKey is neither decoded
+        // nor encoded by the generated code, and would otherwise vanish with no signal.
+        for member in memberBlock.members {
+            guard let variable = member.decl.as(VariableDeclSyntax.self) else { continue }
+            let isStored = variable.bindings.first?.accessorBlock == nil
+            let isStatic = variable.modifiers.contains { ["static", "class"].contains($0.name.text) }
+            let hasJsonKey = variable.attributes.has(attributesIn: ["JsonKey"])
+            guard isStored, !isStatic, !hasJsonKey else { continue }
+            let name = variable.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier.text ?? "property"
+            context.diagnose(
+                Diagnostic(
+                    node: Syntax(variable),
+                    message: JsonSerializableDiagnostic.missingJsonKey(property: name)
+                )
+            )
+        }
+
         let propertiesName = memberBlock.members
             .compactMap { $0.decl.as(VariableDeclSyntax.self) }
             .filter { v in

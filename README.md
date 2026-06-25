@@ -224,6 +224,29 @@ This approach keeps your code clean while providing powerful customization optio
 > `initialize(jsonString:)` helpers use `Data`). You do **not** need to `import ZippyJSON` —
 > it stays encapsulated inside `SwiftJsonSerializable`.
 
+## Behavior & Limitations
+
+- **Every stored property needs `@JsonKey`.** Properties without it are neither decoded nor
+  encoded by the generated code. The macro emits a compile-time **warning** for any
+  un-annotated stored property so the omission is never silent — annotate it, or make it
+  computed/`static` to opt out.
+- **`@JsonKey` works fully only inside `@JsonSerializable`.** When used in a plain `Codable`
+  type, an array, or a dictionary, the wrapper passes its value through transparently, but
+  multi-key fallback, `ignoringErrors`, and default-on-missing are **not** available there —
+  those require the keyed container that `@JsonSerializable` provides. (A missing key in a
+  plain `Codable` type throws, exactly as it would for a normal `Codable` property.)
+- **Encoding writes one key.** A multi-key property is written under the key it was decoded
+  from, or the first declared key for a code-constructed value — not under every key.
+- **`ignoringErrors` affects decoding only.** Encoding always propagates errors, so a value
+  that cannot be serialized surfaces instead of being silently dropped.
+- **Optional handling.** A `nil` Optional is omitted from the output (inside
+  `@JsonSerializable`); on decode, an absent or `null` key falls back to the default. An
+  explicit `null` and an absent key are treated the same.
+- **Access levels.** `public` and `package` types generate matching members. `open` is
+  treated as `public`: **class inheritance is not supported** — apply `@JsonSerializable` to
+  `final`/standalone classes or structs.
+- **Decoder.** Parsing always uses ZippyJSON under the hood.
+
 ## API Reference
 
 ### `@JsonSerializable`
